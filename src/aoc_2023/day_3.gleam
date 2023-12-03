@@ -1,7 +1,7 @@
 import gleam/string
 import gleam/int
-import gleam/result
 import gleam/list
+import gleam/dict
 import gleam/option.{type Option, None, Some}
 
 type State {
@@ -17,6 +17,7 @@ fn parse(input: String) -> List(Part) {
   lines
   |> list.index_map(fn(index, line) {
     find_parts_in_line(
+      index,
       line,
       list.at(lines, index - 1),
       list.at(lines, index + 1),
@@ -28,24 +29,27 @@ fn parse(input: String) -> List(Part) {
 pub fn pt_1(input: String) {
   input
   |> parse()
-  |> list.map(fn(p) { int.undigits(p.number, 10) })
-  |> result.values()
+  |> list.map(fn(p) { p.number })
   |> int.sum()
 }
 
 pub fn pt_2(input: String) {
   input
   |> parse()
-  |> list.filter(fn(p) { list.length(p.number) == 2 && p.char == "*" })
-  |> list.map(fn(p) {
-    let assert [a, b] = p.number
-    a * b
+  |> list.filter(fn(p) { p.char == "*" })
+  |> list.group(fn(p) { p.char_coord })
+  |> dict.to_list()
+  |> list.filter_map(fn(item) {
+    case item {
+      #(_, [a, b]) -> Ok(a.number * b.number)
+      _ -> Error(Nil)
+    }
   })
   |> int.sum()
 }
 
 type Part {
-  Part(number: List(Int), char: String)
+  Part(number: Int, char: String, char_coord: #(Int, Int))
 }
 
 type Token {
@@ -65,6 +69,7 @@ fn classify_token(char) {
 }
 
 fn find_parts_in_line(
+  line_index: Int,
   line: List(String),
   prev_line: Result(List(String), Nil),
   next_line: Result(List(String), Nil),
@@ -77,12 +82,12 @@ fn find_parts_in_line(
         case classify_token(char) {
           Number -> add_number(state, index, char)
           Dot | Special ->
-            maybe_find_part(state, prev_line, Ok(line), next_line)
+            maybe_find_part(state, line_index, prev_line, Ok(line), next_line)
         }
       },
     )
 
-  let state = maybe_find_part(state, prev_line, Ok(line), next_line)
+  let state = maybe_find_part(state, line_index, prev_line, Ok(line), next_line)
   list.reverse(state.found)
 }
 
@@ -97,18 +102,33 @@ fn add_number(state: State, index: Int, number: String) {
   State(..state, wip: wip)
 }
 
-fn keep_wip(state: State, char: String) {
+fn keep_wip(state: State, char: #(Int, Int, String)) {
   let assert Some(#(_, number)) = state.wip
-  let number = list.reverse(number)
+  let assert Ok(number) =
+    number
+    |> list.reverse()
+    |> int.undigits(10)
 
-  State(wip: None, found: [Part(number, char), ..state.found])
+  State(
+    wip: None,
+    found: [
+      Part(number: number, char_coord: #(char.0, char.1), char: char.2),
+      ..state.found
+    ],
+  )
 }
 
 fn drop_wip(state) {
   State(..state, wip: None)
 }
 
-fn maybe_find_part(state: State, prev_line, current_line, next_line) {
+fn maybe_find_part(
+  state: State,
+  line_index: Int,
+  prev_line,
+  current_line,
+  next_line,
+) {
   case state.wip {
     None -> state
     Some(#(start_index, value)) -> {
@@ -119,9 +139,13 @@ fn maybe_find_part(state: State, prev_line, current_line, next_line) {
       }
 
       let char =
-        find_special(prev_line, drop, keep)
-        |> option.lazy_or(fn() { find_special(current_line, drop, keep) })
-        |> option.lazy_or(fn() { find_special(next_line, drop, keep) })
+        find_special(line_index - 1, prev_line, drop, keep)
+        |> option.lazy_or(fn() {
+          find_special(line_index, current_line, drop, keep)
+        })
+        |> option.lazy_or(fn() {
+          find_special(line_index + 1, next_line, drop, keep)
+        })
 
       case char {
         Some(char) -> keep_wip(state, char)
@@ -131,13 +155,22 @@ fn maybe_find_part(state: State, prev_line, current_line, next_line) {
   }
 }
 
-fn find_special(line, start, length) -> Option(String) {
+fn find_special(line_index, line, start, length) -> Option(#(Int, Int, String)) {
   case line {
     Ok(line) ->
       line
       |> list.drop(start)
       |> list.take(length)
-      |> list.find(fn(c) { classify_token(c) == Special })
+      |> list.index_map(fn(i, x) { #(int.max(start, 0) + i, x) })
+      |> list.filter_map(fn(x) {
+        let assert #(i, c) = x
+
+        case classify_token(c) {
+          Special -> Ok(#(i, line_index, c))
+          _ -> Error(Nil)
+        }
+      })
+      |> list.first()
       |> option.from_result()
 
     Error(Nil) -> None
