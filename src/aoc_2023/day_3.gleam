@@ -2,14 +2,13 @@ import gleam/string
 import gleam/int
 import gleam/result
 import gleam/list
-import gleam/io
 import gleam/option.{type Option, None, Some}
 
 type State {
-  State(wip: Option(#(Int, String)), found: List(Int))
+  State(wip: Option(#(Int, List(Int))), found: List(Part))
 }
 
-pub fn pt_1(input: String) {
+fn parse(input: String) -> List(Part) {
   let lines =
     input
     |> string.split("\n")
@@ -24,11 +23,29 @@ pub fn pt_1(input: String) {
     )
   })
   |> list.flatten()
+}
+
+pub fn pt_1(input: String) {
+  input
+  |> parse()
+  |> list.map(fn(p) { int.undigits(p.number, 10) })
+  |> result.values()
   |> int.sum()
 }
 
 pub fn pt_2(input: String) {
-  todo
+  input
+  |> parse()
+  |> list.filter(fn(p) { list.length(p.number) == 2 && p.char == "*" })
+  |> list.map(fn(p) {
+    let assert [a, b] = p.number
+    a * b
+  })
+  |> int.sum()
+}
+
+type Part {
+  Part(number: List(Int), char: String)
 }
 
 type Token {
@@ -51,7 +68,7 @@ fn find_parts_in_line(
   line: List(String),
   prev_line: Result(List(String), Nil),
   next_line: Result(List(String), Nil),
-) -> List(Int) {
+) -> List(Part) {
   let state =
     list.index_fold(
       line,
@@ -70,25 +87,21 @@ fn find_parts_in_line(
 }
 
 fn add_number(state: State, index: Int, number: String) {
+  let assert Ok(number) = int.parse(number)
+
   let wip = case state.wip {
-    None -> Some(#(index, number))
-    Some(wip) -> Some(#(wip.0, wip.1 <> number))
+    None -> Some(#(index, [number]))
+    Some(wip) -> Some(#(wip.0, [number, ..wip.1]))
   }
 
   State(..state, wip: wip)
 }
 
-fn keep_wip(state: State) {
-  let assert Some(#(_, value)) = state.wip
+fn keep_wip(state: State, char: String) {
+  let assert Some(#(_, number)) = state.wip
+  let number = list.reverse(number)
 
-  let assert Ok(number) =
-    value
-    |> string.split("")
-    |> list.map(int.parse)
-    |> result.values()
-    |> int.undigits(10)
-
-  State(wip: None, found: [number, ..state.found])
+  State(wip: None, found: [Part(number, char), ..state.found])
 }
 
 fn drop_wip(state) {
@@ -101,32 +114,32 @@ fn maybe_find_part(state: State, prev_line, current_line, next_line) {
     Some(#(start_index, value)) -> {
       let drop = start_index - 1
       let keep = case start_index {
-        0 -> string.length(value) + 1
-        _ -> string.length(value) + 2
+        0 -> list.length(value) + 1
+        _ -> list.length(value) + 2
       }
 
-      case
-        has_special(prev_line, drop, keep) || has_special(
-          current_line,
-          drop,
-          keep,
-        ) || has_special(next_line, drop, keep)
-      {
-        True -> keep_wip(state)
-        False -> drop_wip(state)
+      let char =
+        find_special(prev_line, drop, keep)
+        |> option.lazy_or(fn() { find_special(current_line, drop, keep) })
+        |> option.lazy_or(fn() { find_special(next_line, drop, keep) })
+
+      case char {
+        Some(char) -> keep_wip(state, char)
+        None -> drop_wip(state)
       }
     }
   }
 }
 
-fn has_special(line, start, length) -> Bool {
+fn find_special(line, start, length) -> Option(String) {
   case line {
     Ok(line) ->
       line
       |> list.drop(start)
       |> list.take(length)
-      |> list.any(fn(c) { classify_token(c) == Special })
+      |> list.find(fn(c) { classify_token(c) == Special })
+      |> option.from_result()
 
-    Error(Nil) -> False
+    Error(Nil) -> None
   }
 }
