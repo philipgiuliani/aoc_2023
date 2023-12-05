@@ -3,29 +3,33 @@ import gleam/string
 import gleam/int
 import gleam/dict.{type Dict}
 
+type Mapping {
+  Mapping(source: Int, destination: Int, count: Int)
+}
+
 type Data {
   Data(
     seeds: List(Int),
-    seed_to_soil: Dict(Int, Int),
-    soil_to_fertilizer: Dict(Int, Int),
-    fertilizer_to_water: Dict(Int, Int),
-    water_to_light: Dict(Int, Int),
-    light_to_temperature: Dict(Int, Int),
-    temperature_to_humidity: Dict(Int, Int),
-    humidity_to_location: Dict(Int, Int),
+    seed_to_soil: List(Mapping),
+    soil_to_fertilizer: List(Mapping),
+    fertilizer_to_water: List(Mapping),
+    water_to_light: List(Mapping),
+    light_to_temperature: List(Mapping),
+    temperature_to_humidity: List(Mapping),
+    humidity_to_location: List(Mapping),
   )
 }
 
 fn empty_data() -> Data {
   Data(
     seeds: [],
-    seed_to_soil: dict.new(),
-    soil_to_fertilizer: dict.new(),
-    fertilizer_to_water: dict.new(),
-    water_to_light: dict.new(),
-    light_to_temperature: dict.new(),
-    temperature_to_humidity: dict.new(),
-    humidity_to_location: dict.new(),
+    seed_to_soil: [],
+    soil_to_fertilizer: [],
+    fertilizer_to_water: [],
+    water_to_light: [],
+    light_to_temperature: [],
+    temperature_to_humidity: [],
+    humidity_to_location: [],
   )
 }
 
@@ -49,9 +53,21 @@ pub fn pt_2(input: String) {
   todo
 }
 
-fn find_destination(source: Int, dict: Dict(Int, Int)) -> Int {
-  case dict.get(dict, source) {
-    Ok(dest) -> dest
+fn find_destination(source: Int, mappings: List(Mapping)) -> Int {
+  let mapping =
+    list.find(
+      mappings,
+      fn(mapping) {
+        source >= mapping.source && source < mapping.source + mapping.count
+      },
+    )
+
+  case mapping {
+    Ok(mapping) -> {
+      let distance = source - mapping.source
+      mapping.destination + distance
+    }
+
     Error(Nil) -> source
   }
 }
@@ -70,50 +86,45 @@ fn parse_input(input: String) -> Data {
       Data(..acc, seeds: seeds)
     }
     "seed-to-soil map:\n" <> data -> {
-      let data = parse_dict(data)
+      let data = parse_mappings(data)
       Data(..acc, seed_to_soil: data)
     }
     "soil-to-fertilizer map:\n" <> data -> {
-      let data = parse_dict(data)
+      let data = parse_mappings(data)
       Data(..acc, soil_to_fertilizer: data)
     }
     "fertilizer-to-water map:\n" <> data -> {
-      let data = parse_dict(data)
+      let data = parse_mappings(data)
       Data(..acc, fertilizer_to_water: data)
     }
     "water-to-light map:\n" <> data -> {
-      let data = parse_dict(data)
+      let data = parse_mappings(data)
       Data(..acc, water_to_light: data)
     }
     "light-to-temperature map:\n" <> data -> {
-      let data = parse_dict(data)
+      let data = parse_mappings(data)
       Data(..acc, light_to_temperature: data)
     }
     "temperature-to-humidity map:\n" <> data -> {
-      let data = parse_dict(data)
+      let data = parse_mappings(data)
       Data(..acc, temperature_to_humidity: data)
     }
     "humidity-to-location map:\n" <> data -> {
-      let data = parse_dict(data)
+      let data = parse_mappings(data)
       Data(..acc, humidity_to_location: data)
     }
     _ -> panic
   }
 }
 
-fn parse_dict(input: String) -> Dict(Int, Int) {
+fn parse_mappings(input: String) -> List(Mapping) {
   let lines = string.split(input, "\n")
-  use acc, line <- list.fold(lines, dict.new())
+  use line <- list.map(lines)
 
-  let [from, to, count] =
+  let [destination, source, count] =
     line
     |> string.split(" ")
     |> list.filter_map(int.parse)
 
-  from
-  |> list.range(from + count - 1)
-  |> list.index_fold(
-    acc,
-    fn(acc, el, index) { dict.insert(acc, to + index, el) },
-  )
+  Mapping(source: source, destination: destination, count: count)
 }
