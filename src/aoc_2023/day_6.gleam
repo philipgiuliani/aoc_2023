@@ -23,13 +23,23 @@ pub fn pt_2(input: String) {
 fn find_winning_strats(race: Race) -> Int {
   1
   |> iterator.range(race.time)
-  |> iterator.filter(fn(speed) {
-    let remaining = race.time - speed
-    let distance = remaining * speed
+  |> iterator.fold_until(
+    0,
+    fn(acc, speed) {
+      let remaining = race.time - speed
+      let distance = remaining * speed
 
-    distance > race.record
-  })
-  |> iterator.length()
+      case distance > race.record {
+        True -> list.Continue(acc + 1)
+        False -> {
+          case acc {
+            0 -> list.Continue(acc)
+            _ -> list.Stop(acc)
+          }
+        }
+      }
+    },
+  )
 }
 
 fn parse_pt1(input: String) -> List(Race) {
