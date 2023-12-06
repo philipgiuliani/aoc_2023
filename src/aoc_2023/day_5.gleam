@@ -1,7 +1,6 @@
 import gleam/list
 import gleam/string
 import gleam/int
-import gleam/dict.{type Dict}
 
 type Mapping {
   Mapping(source: Int, destination: Int, count: Int)
@@ -49,8 +48,8 @@ pub fn pt_1(input: String) {
   |> int.min(acc)
 }
 
-pub fn pt_2(input: String) {
-  todo
+pub fn pt_2(_input: String) {
+  -1
 }
 
 fn find_destination(source: Int, mappings: List(Mapping)) -> Int {
