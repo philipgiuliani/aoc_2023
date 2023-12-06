@@ -23,25 +23,22 @@ pub fn pt_1(input: String) {
 pub fn pt_2(input: String) {
   input
   |> parse()
-  |> list.fold(
-    #([], 0),
-    fn(acc, game) {
-      let #(counts, total_cards) = acc
-      let #(count, rest) = case counts {
-        [count, ..rest] -> #(count + 1, rest)
-        [] -> #(1, [])
-      }
+  |> list.fold(#([], 0), fn(acc, game) {
+    let #(counts, total_cards) = acc
+    let #(count, rest) = case counts {
+      [count, ..rest] -> #(count + 1, rest)
+      [] -> #(1, [])
+    }
 
-      let matches = count_matches(game)
+    let matches = count_matches(game)
 
-      let new_counts =
-        [rest, list.repeat(count, times: matches)]
-        |> list.transpose()
-        |> list.map(int.sum)
+    let new_counts =
+      [rest, list.repeat(count, times: matches)]
+      |> list.transpose()
+      |> list.map(int.sum)
 
-      #(new_counts, count + total_cards)
-    },
-  )
+    #(new_counts, count + total_cards)
+  })
   |> pair.second()
 }
 

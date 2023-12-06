@@ -34,24 +34,17 @@ fn parse_game(line: String) -> Game {
     subsets
     |> string.split("; ")
     |> list.flat_map(string.split(_, ", "))
-    |> list.fold(
-      dict.new(),
-      fn(acc, el) {
-        let assert [count, color] = string.split(el, " ")
-        let assert Ok(count) = int.parse(count)
+    |> list.fold(dict.new(), fn(acc, el) {
+      let assert [count, color] = string.split(el, " ")
+      let assert Ok(count) = int.parse(count)
 
-        dict.update(
-          acc,
-          color,
-          fn(current) {
-            case current {
-              Some(cur) -> int.max(cur, count)
-              None -> count
-            }
-          },
-        )
-      },
-    )
+      dict.update(acc, color, fn(current) {
+        case current {
+          Some(cur) -> int.max(cur, count)
+          None -> count
+        }
+      })
+    })
 
   Game(
     id: game_id,

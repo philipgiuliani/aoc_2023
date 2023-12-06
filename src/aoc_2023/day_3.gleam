@@ -75,17 +75,13 @@ fn find_parts_in_line(
   next_line: Result(List(String), Nil),
 ) -> List(Part) {
   let state =
-    list.index_fold(
-      line,
-      State(wip: None, found: []),
-      fn(state, char, index) {
-        case classify_token(char) {
-          Number -> add_number(state, index, char)
-          Dot | Special ->
-            maybe_find_part(state, line_index, prev_line, Ok(line), next_line)
-        }
-      },
-    )
+    list.index_fold(line, State(wip: None, found: []), fn(state, char, index) {
+      case classify_token(char) {
+        Number -> add_number(state, index, char)
+        Dot | Special ->
+          maybe_find_part(state, line_index, prev_line, Ok(line), next_line)
+      }
+    })
 
   let state = maybe_find_part(state, line_index, prev_line, Ok(line), next_line)
   list.reverse(state.found)
@@ -109,13 +105,10 @@ fn keep_wip(state: State, char: #(Int, Int, String)) {
     |> list.reverse()
     |> int.undigits(10)
 
-  State(
-    wip: None,
-    found: [
-      Part(number: number, char_coord: #(char.0, char.1), char: char.2),
-      ..state.found
-    ],
-  )
+  State(wip: None, found: [
+    Part(number: number, char_coord: #(char.0, char.1), char: char.2),
+    ..state.found
+  ])
 }
 
 fn drop_wip(state) {

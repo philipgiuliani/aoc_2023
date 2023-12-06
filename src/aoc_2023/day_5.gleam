@@ -54,12 +54,9 @@ pub fn pt_2(_input: String) {
 
 fn find_destination(source: Int, mappings: List(Mapping)) -> Int {
   let mapping =
-    list.find(
-      mappings,
-      fn(mapping) {
-        source >= mapping.source && source < mapping.source + mapping.count
-      },
-    )
+    list.find(mappings, fn(mapping) {
+      source >= mapping.source && source < mapping.source + mapping.count
+    })
 
   case mapping {
     Ok(mapping) -> {
@@ -120,7 +117,7 @@ fn parse_mappings(input: String) -> List(Mapping) {
   let lines = string.split(input, "\n")
   use line <- list.map(lines)
 
-  let [destination, source, count] =
+  let assert [destination, source, count] =
     line
     |> string.split(" ")
     |> list.filter_map(int.parse)
