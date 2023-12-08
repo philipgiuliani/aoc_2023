@@ -2,9 +2,9 @@ import gleam/dict.{type Dict}
 import gleam/string
 import gleam/bit_array
 import gleam/list
-import gleam/io
 import gleam/iterator
 import gleam/pair
+import gleam_community/maths/arithmetics
 
 type Instruction {
   L
@@ -35,7 +35,31 @@ pub fn pt_1(input: String) {
 }
 
 pub fn pt_2(input: String) {
-  todo
+  let #(instructions, mapping) = parse(input)
+
+  mapping
+  |> dict.keys()
+  |> list.filter(string.ends_with(_, "A"))
+  |> list.map(fn(start_point) {
+    instructions
+    |> iterator.from_list()
+    |> iterator.cycle()
+    |> iterator.fold_until(#(0, start_point), fn(acc, instruction) {
+      let assert #(count, last_state) = acc
+      let assert Ok(next) = dict.get(mapping, last_state)
+      let next = case instruction {
+        L -> next.0
+        R -> next.1
+      }
+
+      case string.ends_with(next, "Z") {
+        True -> list.Stop(#(count + 1, next))
+        False -> list.Continue(#(count + 1, next))
+      }
+    })
+    |> pair.first()
+  })
+  |> list.reduce(arithmetics.lcm)
 }
 
 fn parse(input: String) -> #(List(Instruction), Dict(String, #(String, String))) {
