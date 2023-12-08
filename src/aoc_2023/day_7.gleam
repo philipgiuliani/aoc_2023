@@ -5,6 +5,7 @@ import gleam/order.{type Order}
 import gleam/dict
 import gleam/option.{None, Some}
 import gleam/iterator
+import gleam/pair
 
 type Hand {
   Hand(cards: List(Int), bid: Int)
@@ -15,11 +16,32 @@ pub fn pt_1(input: String) {
   |> string.split("\n")
   |> list.map(parse_hand)
   |> list.sort(compare_hand)
-  |> list.index_fold(0, fn(acc, hand, i) { acc + hand.bid * { i + 1 } })
+  |> score()
 }
 
 pub fn pt_2(input: String) {
-  todo
+  input
+  |> string.split("\n")
+  |> list.map(parse_hand)
+  |> list.map(weaken_joker)
+  |> list.sort(compare_hand)
+  |> score()
+}
+
+fn weaken_joker(hand: Hand) -> Hand {
+  let cards =
+    list.map(hand.cards, fn(c) {
+      case c {
+        11 -> 1
+        _ -> c
+      }
+    })
+
+  Hand(..hand, cards: cards)
+}
+
+fn score(hands: List(Hand)) -> Int {
+  list.index_fold(hands, 0, fn(acc, hand, i) { acc + hand.bid * { i + 1 } })
 }
 
 fn parse_hand(input: String) -> Hand {
@@ -75,13 +97,23 @@ fn score_hand(hand: Hand) -> Int {
         }
       })
     })
-    |> dict.values()
+    |> dict.to_list()
     |> list.sort(fn(a, b) {
-      int.compare(a, b)
+      int.compare(a.1, b.1)
       |> order.negate()
     })
 
-  case frequencies {
+  // add the joker to whatever you have the most
+  let frequencies = case list.key_pop(frequencies, 1) {
+    Ok(#(count_jokers, [best, ..rest])) -> [
+      #(best.0, best.1 + count_jokers),
+      ..rest
+    ]
+
+    _ -> frequencies
+  }
+
+  case list.map(frequencies, pair.second) {
     // five of a kind
     [5] -> 7
     // four of a kind
