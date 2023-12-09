@@ -5,6 +5,7 @@ import gleam/list
 import gleam/iterator
 import gleam/pair
 import gleam_community/maths/arithmetics
+import gleam/result
 
 type Instruction {
   L
@@ -60,6 +61,7 @@ pub fn pt_2(input: String) {
     |> pair.first()
   })
   |> list.reduce(arithmetics.lcm)
+  |> result.unwrap(0)
 }
 
 fn parse(input: String) -> #(List(Instruction), Dict(String, #(String, String))) {
